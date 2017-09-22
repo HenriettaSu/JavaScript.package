@@ -1,0 +1,71 @@
+/**
+ * Created by Henrie on 8/9/2017.
+ */
+module.exports = {
+    "env": {
+        "browser": true,
+    },
+    "globals": {},
+    "rules": {
+        "no-constant-condition": "error",
+        "no-delete-var": "error",
+        "no-dupe-keys": "error",
+        "no-dupe-args": "error",
+        "no-duplicate-case": "error",
+        "no-else-return": "error",
+        "no-empty": "error",
+        "no-ex-assign": "error",
+        "no-extra-boolean-cast": "error",
+        "no-extra-parens": "error",
+        "no-extra-semi": "error",
+        "no-func-assign": "error",
+        "no-irregular-whitespace": "error",
+        "no-label-var": "error",
+        "no-labels": "error",
+        "no-mixed-spaces-and-tabs": "error",
+        "no-obj-calls": "error",
+        "no-redeclare": "error",
+        "no-script-url": "error",
+        "no-self-compare": "error",
+        "no-spaced-func": "error",
+        "no-sparse-arrays": "error",
+        "no-unexpected-multiline": "error",
+        "no-unneeded-ternary": "error",
+        "no-unreachable": "error",
+        "no-unused-vars": "warn",
+        "no-use-before-define": "error",
+        "eqeqeq": "error",
+        // "func-names": "error",
+        "guard-for-in": "error",
+        "use-isnan": "error",
+        "vars-on-top": "error",
+        "array-bracket-spacing": "warn",
+        "brace-style": "warn",
+        "camelcase": "warn", // 駝峰命名
+        "comma-dangle": "warn",
+        "comma-spacing": "warn",
+        "comma-style": "warn",
+        "curly": "warn",
+        "eol-last": "warn",
+        "dot-location": ["warn", "property"],
+        "keyword-spacing": "warn",
+        "no-trailing-spaces": "warn",
+        "no-multi-spaces": "warn",
+        "no-multi-str": "warn",
+        "no-multiple-empty-lines": ["warn", {"max": 1}],
+        "object-curly-spacing": "warn",
+        "one-var": "warn", // 單個聲明
+        "operator-linebreak": "warn", // 換行符風格
+        "padded-blocks": ["warn", "never"],
+        "quotes": ["warn", "single"], // 【重要警告】引號風格，建議單引號
+        "semi": ["warn", "always", {"omitLastInOneLineBlock": true}],
+        "semi-spacing": "warn",
+        "space-before-blocks": "warn",
+        "space-before-function-paren": "warn",
+        "space-in-parens": "warn",
+        "space-infix-ops": "warn",
+        "wrap-iife": ["warn", "inside"],
+        "wrap-regex": "warn",
+        "yoda": "warn"
+    }
+}
