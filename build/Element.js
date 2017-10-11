@@ -1,5 +1,5 @@
 function getSelectorType (selector) {
-    var l = selector[0],
+    var l = selector.charAt(0),
         type,
         selectorName;
     if (l === '#') {
@@ -64,7 +64,7 @@ function getDir (elem, dir) {
             // TODO
         }
     };
-    Element.prototype.addEvent = function (evt, fn, useCapture) {
+    Element.prototype.on = function (evt, fn, useCapture) {
         var that = this;
         if (that.addEventListener) {
             that.addEventListener(evt, fn, useCapture);
@@ -74,7 +74,7 @@ function getDir (elem, dir) {
         }
         that['on' + evt] = fn;
     };
-    Element.prototype.removeEvent = function (evt, fn, useCapture) {
+    Element.prototype.off = function (evt, fn, useCapture) {
         var that = this;
         if (that.removeEventListener) {
             that.removeEventListener(evt, fn, useCapture);
@@ -209,6 +209,13 @@ function getDir (elem, dir) {
             }
         }
         return arr;
+    };
+    Element.prototype.getLastChild = function () {
+        var e = this.lastChild;
+        while (e.nodeType !== 1) {
+            e = e.previousSibling;
+        }
+        return e;
     };
     Element.prototype.prev = function () {
         return getSibling(this, 'previousSibling');
