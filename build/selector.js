@@ -336,6 +336,20 @@
                     this.css(n, val);
                 });
                 return that;
+            },
+            append: function (html) {
+                var that = this;
+                that.each(function () {
+                    this.append(html);
+                });
+                return that;
+            },
+            html: function (html) {
+                var that = this;
+                that.each(function () {
+                    this.html(html);
+                });
+                return that;
             }
         };
 

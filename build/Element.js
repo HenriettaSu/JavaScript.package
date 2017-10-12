@@ -17,51 +17,75 @@ function getSelectorType (selector) {
         selectorName: selectorName
     };
 }
-function getSibling (el, dir) {
-    do {
-        el = el[dir];
-    } while (el && el.nodeType !== 1);
-    return el;
-}
-function getDir (elem, dir) {
-    var matched = [];
-    while ((elem = elem[dir]) && elem.nodeType !== 9) {
-        if (elem.nodeType === 1) {
-            matched.push(elem);
-        }
-    }
-    return matched;
-}
 (function (global) {
+    var supportInnerHTML = (function () {
+            var table = document.createElement('table'),
+                tbody = document.createElement('tbody');
+            table.appendChild(tbody);
+            try {
+                tbody.innerHTML = '<tr></tr>';
+            } catch (e) {
+                table = null;
+                tbody = null;
+                return false;
+            }
+            table = null;
+            tbody = null;
+            return true;
+        })(),
+        isUnderIE9 = (function () {
+            return navigator.appName === 'Microsoft Internet Explorer' && parseInt(navigator.appVersion.split(';')[1].replace(/[ ]/g, '').replace('MSIE', '')) < 9;
+        })();
+    function getInnerHTML (el) {
+        var innerHTML = el.innerHTML,
+            regOne,
+            regTwo,
+            text;
+        if (!isUnderIE9) {
+            return innerHTML;
+        }
+        // Support: IE < 9
+        regOne = /(\s+\w+)\s*=\s*([^<>"\s]+)(?=[^<>]*\/>)/ig;
+        regTwo = /"'([^'"]*)'"/ig;
+        innerHTML = innerHTML.replace(regOne, '$1="$2"').replace(regTwo, '\"$1\"');
+        text = innerHTML.replace(/<(\/?)(\w+)([^>]*)>/g, function (match, $1, $2, $3) {
+            if ($1) {
+                return '</' + $2.toLowerCase() + '>';
+            }
+            return ('<' + $2.toLowerCase() + $3 + '>').replace(/=(("[^"]*?")|('[^']*?')|([\w\-\.]+))([\s>])/g, function (match2, $1, $2, $3, $4, $5, position, all) {
+                if ($4) {
+                    return '="' + $4 + '"' + $5;
+                }
+                return match2;
+            });
+        });
+        return text.replace(/<\/?([^>]+)>/g, function (l) {
+            return l;
+        });
+    }
+    function getSibling (el, dir) {
+        do {
+            el = el[dir];
+        } while (el && el.nodeType !== 1);
+        return el;
+    }
+    function getDir (elem, dir) {
+        var matched = [];
+        while ((elem = elem[dir]) && elem.nodeType !== 9) {
+            if (elem.nodeType === 1) {
+                matched.push(elem);
+            }
+        }
+        return matched;
+    }
     Element.prototype.remove = Element.prototype.remove || function () {
-            this.parentNode.removeChild(this);
+            var temp = this.parentNode.removeChild(this);
+            temp = null;
         };
-    Element.prototype.append = function (html) { // TODO
-        var that = this,
-            div;
-        try {
-            that.innerHTML += html;
-        } catch (e) {
-            div = document.createElement('div');
-            div.innerHTML = html;
-            that.appendChild(div);
-            div = null;
-        }
-    };
-    Element.prototype.html = function (html) {
-        var that = this,
-            innerHtml = that.innerHTML,
-            div;
-        if (!html) {
-            return innerHtml;
-        }
+    Element.prototype.empty = function () {
+        var that = this;
         while (that.firstChild) {
-            that.removeChild(that.firstChild);
-        }
-        try {
-            that.innerHTML = html;
-        } catch (e) {
-            // TODO
+            that.firstChild.remove();
         }
     };
     Element.prototype.on = function (evt, fn, useCapture) {
@@ -236,6 +260,32 @@ function getDir (elem, dir) {
             if (obj[i] === this) {
                 return i;
             }
+        }
+    };
+    Element.prototype.append = function (html) {
+        var that = this,
+            temp;
+        if (supportInnerHTML) {
+            that.innerHTML += html;
+            return;
+        }
+        temp = document.createElement('div');
+        temp.id = 'tempEl';
+        temp.innerHTML = html;
+        that.appendChild(temp);
+        document.getElementById('tempEl').removeNode(false);
+        temp = null;
+    };
+    Element.prototype.html = function (html) {
+        var that = this;
+        if (typeof html === 'undefined') {
+            return getInnerHTML(that);
+        }
+        if (supportInnerHTML) {
+            that.innerHTML = html;
+        } else {
+            that.empty();
+            that.append(html);
         }
     };
 })(this);
