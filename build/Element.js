@@ -18,24 +18,100 @@ function getSelectorType (selector) {
     };
 }
 (function (global) {
-    var supportInnerHTML = (function () {
+    var eventCache = {},
+        cacheToken = [],
+        supportInnerHTML = (function () {
             var table = document.createElement('table'),
                 tbody = document.createElement('tbody');
             table.appendChild(tbody);
             try {
                 tbody.innerHTML = '<tr></tr>';
             } catch (e) {
+                return false;
+            } finally {
                 table = null;
                 tbody = null;
-                return false;
             }
-            table = null;
-            tbody = null;
             return true;
         })(),
         isUnderIE9 = (function () {
             return navigator.appName === 'Microsoft Internet Explorer' && parseInt(navigator.appVersion.split(';')[1].replace(/[ ]/g, '').replace('MSIE', '')) < 9;
         })();
+
+    function makeCache (el, evt, handler) {
+        var token,
+            i,
+            e,
+            len,
+            evtName;
+        for (i = 0; i < cacheToken.length; i++) {
+            token = cacheToken[i];
+            e = eventCache[token];
+            if (e.el === el) {
+                evtName = eventCache[token].events[evt] || [];
+                evtName.push(handler);
+                return;
+            }
+        }
+        len = cacheToken[cacheToken.length - 1] >= 0 ? cacheToken[cacheToken.length - 1] : -1;
+        token = len + 1;
+        cacheToken.push(token);
+        eventCache[token] = {
+            el: el,
+            events: {}
+        };
+        eventCache[token].events[evt] = [handler];
+    }
+    function removeEvent (el, evt, handler, useCapture) {
+        if (el.removeEventListener) {
+            return el.removeEventListener(evt, handler, useCapture);
+        } else if (el.detachEvent) {
+            return el.detachEvent('on' + evt, handler);
+        }
+        el['on' + evt] = null;
+    }
+    function cleanEvent (el) {
+        var i,
+            e,
+            token,
+            events,
+            j,
+            handler;
+        for (i = 0; i < cacheToken.length; i++) {
+            token = cacheToken[i];
+            e = eventCache[token];
+            if (e.el === el) {
+                events = e.events;
+                Object.keys(events).forEach(function (evt) {
+                    for (j = 0; j < events[evt].length; j++) {
+                        handler = events[evt][j];
+                        removeEvent(el, evt, handler);
+                    }
+                });
+                delete eventCache[token];
+                cacheToken.splice(i, 1);
+                break;
+            }
+        }
+    }
+    function destoryElement (el, destoryRoot) {
+        var temp,
+            child;
+        while (child = el.firstChild) {
+            if (child.nodeType === 1) {
+                cleanEvent(child);
+                child.destory();
+            } else {
+                temp = el.removeChild(child);
+                temp = null;
+            }
+        }
+        if (destoryRoot) {
+            cleanEvent(el);
+            temp = el.parentNode.removeChild(el);
+            temp = null;
+        }
+    }
     function getInnerHTML (el) {
         var innerHTML = el.innerHTML,
             regOne,
@@ -78,36 +154,6 @@ function getSelectorType (selector) {
         }
         return matched;
     }
-    Element.prototype.remove = Element.prototype.remove || function () {
-            var temp = this.parentNode.removeChild(this);
-            temp = null;
-        };
-    Element.prototype.empty = function () {
-        var that = this;
-        while (that.firstChild) {
-            that.firstChild.remove();
-        }
-    };
-    Element.prototype.on = function (evt, fn, useCapture) {
-        var that = this;
-        if (that.addEventListener) {
-            that.addEventListener(evt, fn, useCapture);
-            return true;
-        } else if (that.attachEvent) {
-            return that.attachEvent('on' + evt, fn);
-        }
-        that['on' + evt] = fn;
-    };
-    Element.prototype.off = function (evt, fn, useCapture) {
-        var that = this;
-        if (that.removeEventListener) {
-            that.removeEventListener(evt, fn, useCapture);
-            return true;
-        } else if (that.detachEvent) {
-            return that.detachEvent('on' + evt, fn);
-        }
-        that['on' + evt] = null;
-    };
     Element.prototype.getClass = function () {
         return this.getAttribute('class') || '';
     };
@@ -262,6 +308,48 @@ function getSelectorType (selector) {
             }
         }
     };
+    Element.prototype.on = function (evt, handler, useCapture) {
+        var that = this;
+        makeCache(that, evt, handler);
+        if (that.addEventListener) {
+            return that.addEventListener(evt, handler, useCapture);
+        } else if (that.attachEvent) {
+            return that.attachEvent('on' + evt, handler);
+        }
+        that['on' + evt] = handler;
+    };
+    Element.prototype.off = function (evt, handler, useCapture) {
+        var that = this,
+            i,
+            token,
+            e,
+            events,
+            j;
+        for (i = 0; i < cacheToken.length; i++) {
+            token = cacheToken[i];
+            e = eventCache[token];
+            if (e && e.el === that) {
+                if (!handler) {
+                    events = e.events;
+                    for (j = 0; j < events[evt].length; j++) {
+                        handler = events[evt][j];
+                        removeEvent(that, evt, handler, useCapture);
+                    }
+                    eventCache[token].events[evt] = [];
+                } else {
+                    eventCache[token].events[evt].remove(handler);
+                    removeEvent(that, evt, handler, useCapture);
+                }
+                break;
+            }
+        }
+    };
+    Element.prototype.destory = function () {
+        destoryElement(this, true);
+    };
+    Element.prototype.empty = function () {
+        destoryElement(this);
+    };
     Element.prototype.append = function (html) {
         var that = this,
             temp;
@@ -271,8 +359,8 @@ function getSelectorType (selector) {
         }
         temp = document.createElement('div');
         temp.id = 'tempEl';
-        temp.innerHTML = html;
         that.appendChild(temp);
+        temp.innerHTML = html;
         document.getElementById('tempEl').removeNode(false);
         temp = null;
     };
@@ -281,10 +369,10 @@ function getSelectorType (selector) {
         if (typeof html === 'undefined') {
             return getInnerHTML(that);
         }
+        that.empty();
         if (supportInnerHTML) {
             that.innerHTML = html;
         } else {
-            that.empty();
             that.append(html);
         }
     };

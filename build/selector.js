@@ -306,7 +306,7 @@
             remove: function () {
                 var that = this;
                 that.each(function () {
-                    this.remove();
+                    this.destory();
                 });
             },
             addClass: function (css) {
