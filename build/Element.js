@@ -38,18 +38,47 @@ function getSelectorType (selector) {
             return navigator.appName === 'Microsoft Internet Explorer' && parseInt(navigator.appVersion.split(';')[1].replace(/[ ]/g, '').replace('MSIE', '')) < 9;
         })();
 
-    function makeCache (el, evt, handler) {
+    function makeCache (el, evt, handler, delegate, selector) {
         var token,
             i,
             e,
             len,
-            evtName;
+            type = selector ? 'delegateEvents' : 'events',
+            tempEventType,
+            tempEvent,
+            delegateEvent;
+        if (selector) {
+            delegateEvent = {
+                handler: handler,
+                delegate: delegate
+            };
+        }
+        function noEvent () {
+            tempEventType = eventCache[token][type] = {};
+            if (selector) {
+                tempEventType[evt] = {};
+                tempEventType[evt][selector] = [delegateEvent];
+            } else {
+                tempEventType[evt] = [handler];
+            }
+        }
         for (i = 0; i < cacheToken.length; i++) {
             token = cacheToken[i];
             e = eventCache[token];
-            if (e.el === el) {
-                evtName = eventCache[token].events[evt] || [];
-                evtName.push(handler);
+            if (e.el === el) { // 元素已經在緩存裡
+                if (!e[type]) { // 緩存裡的元素沒有同樣的事件
+                    noEvent();
+                    return;
+                }
+                tempEvent = e[type][evt];
+                if (selector) {
+                    tempEvent[selector].push(delegateEvent);
+                } else {
+                    if ([handler].inArray(tempEvent)) {
+                        return;
+                    }
+                    (tempEvent || []).push(handler);
+                }
                 return;
             }
         }
@@ -57,10 +86,17 @@ function getSelectorType (selector) {
         token = len + 1;
         cacheToken.push(token);
         eventCache[token] = {
-            el: el,
-            events: {}
+            el: el
         };
-        eventCache[token].events[evt] = [handler];
+        noEvent();
+    }
+    function addEvent (el, evt, handler, useCapture) {
+        if (el.addEventListener) {
+            return el.addEventListener(evt, handler, useCapture);
+        } else if (el.attachEvent) {
+            return el.attachEvent('on' + evt, handler);
+        }
+        el['on' + evt] = handler;
     }
     function removeEvent (el, evt, handler, useCapture) {
         if (el.removeEventListener) {
@@ -308,37 +344,87 @@ function getSelectorType (selector) {
             }
         }
     };
-    Element.prototype.on = function (evt, handler, useCapture) {
-        var that = this;
-        makeCache(that, evt, handler);
-        if (that.addEventListener) {
-            return that.addEventListener(evt, handler, useCapture);
-        } else if (that.attachEvent) {
-            return that.attachEvent('on' + evt, handler);
-        }
-        that['on' + evt] = handler;
-    };
-    Element.prototype.off = function (evt, handler, useCapture) {
+    Element.prototype.on = function () {
         var that = this,
+            args = arguments,
+            evt = args[0],
+            isFun = typeof args[1] === 'function',
+            el,
+            handler,
+            useCapture;
+        if (isFun) {
+            handler = args[1];
+            useCapture = args[2];
+        } else {
+            el = args[1];
+            handler = args[2];
+            useCapture = args[3];
+        }
+        if (isFun) {
+            makeCache(that, evt, handler);
+            return addEvent(that, evt, handler, useCapture);
+        }
+        function delegateHandler (e) {
+            var event = e || window.event,
+                target = event.target || event.srcElement;
+            if (target.is(el)) {
+                handler.call(target, Array.prototype.slice.call(arguments));
+            }
+        }
+        makeCache(that, evt, handler, delegateHandler, el);
+        return addEvent(that, evt, delegateHandler, useCapture);
+    };
+    Element.prototype.off = function () {
+        var that = this,
+            args = arguments,
+            evt = args[0],
+            isFun = typeof arguments[1] === 'function',
+            el,
+            handler,
+            useCapture,
             i,
             token,
             e,
-            events,
-            j;
+            event,
+            j,
+            delegateEvents,
+            dEvt;
+        if (isFun) {
+            handler = args[1];
+            useCapture = args[2];
+        } else {
+            el = args[1];
+            handler = args[2];
+            useCapture = args[3];
+        }
         for (i = 0; i < cacheToken.length; i++) {
             token = cacheToken[i];
             e = eventCache[token];
             if (e && e.el === that) {
                 if (!handler) {
-                    events = e.events;
-                    for (j = 0; j < events[evt].length; j++) {
-                        handler = events[evt][j];
+                    event = e.events[evt];
+                    if (event) {
+                        for (j = 0; j < event.length; j++) {
+                            handler = event[j];
+                            removeEvent(that, evt, handler, useCapture);
+                        }
+                        e.events[evt] = [];
+                        e.delegateEvents[evt] = [];
+                    }
+                } else {
+                    if (el) {
+                        delegateEvents = eventCache[token].delegateEvents[evt][el];
+                        for (j = 0; j < delegateEvents.length; j++) {
+                            dEvt = delegateEvents[j];
+                            if (dEvt.handler === handler) {
+                                delegateEvents.remove(dEvt);
+                                return removeEvent(that, evt, dEvt.delegate, useCapture);
+                            }
+                        }
+                    } else {
+                        e.events[evt].remove(handler);
                         removeEvent(that, evt, handler, useCapture);
                     }
-                    eventCache[token].events[evt] = [];
-                } else {
-                    eventCache[token].events[evt].remove(handler);
-                    removeEvent(that, evt, handler, useCapture);
                 }
                 break;
             }

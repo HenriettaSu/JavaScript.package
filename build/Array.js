@@ -18,6 +18,7 @@
     };
     Array.prototype.inArray = function (arr) { // 檢測元素（數組形式）是否存在於某數組中
         var that = this,
+            i,
             el;
         for (i = 0; i < that.length; i++) {
             el = that[i];
