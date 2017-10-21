@@ -15,9 +15,7 @@ const gulp = require('gulp'),
     distJs = 'dist/*.js',
     DIST_JS_PATH = 'dist';
 
-let fileList = require('./importFile');
-
-Array.from(fileList, (n) => BUILD_JS_PATH + '/' + n);
+let fileList = Array.from(require('./importFile'), (n) => DIST_JS_PATH + '/' + n + '.min.js');
 
 let isFixed = file => file.eslint !== null && file.eslint.fixed;
 
@@ -51,7 +49,7 @@ gulp.task('jscompress', ['eslint'], cb => {
 
 // concat js
 gulp.task('expo', ['jscompress'], cb => {
-    gulp.src(distJs)
+    gulp.src(fileList)
         .pipe(concat('JSPackage.js'))
         .pipe(gulp.dest(''));
     cb();

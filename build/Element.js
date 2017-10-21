@@ -111,6 +111,8 @@ function getSelectorType (selector) {
             e,
             token,
             events,
+            delegateEvents,
+            delegateEl,
             j,
             handler;
         for (i = 0; i < cacheToken.length; i++) {
@@ -118,10 +120,25 @@ function getSelectorType (selector) {
             e = eventCache[token];
             if (e.el === el) {
                 events = e.events;
+                delegateEvents = e.delegateEvents;
                 Object.keys(events).forEach(function (evt) {
                     for (j = 0; j < events[evt].length; j++) {
                         handler = events[evt][j];
                         removeEvent(el, evt, handler);
+                    }
+                });
+                Object.keys(delegateEvents).forEach(function (evt) {
+                    for (delegateEl in delegateEvents[evt]) {
+                        if (delegateEl.hasOwnProperty()) {
+                            console.log(delegateEl);
+                        }
+                    }
+                    for (j = 0; j < delegateEvents[evt].length; j++) {
+                        handler = events[evt][j];
+                        console.log(handler);
+                        console.log(el);
+                        console.log(evt);
+                        // removeEvent(el, evt, handler);
                     }
                 });
                 delete eventCache[token];
