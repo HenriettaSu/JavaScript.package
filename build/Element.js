@@ -1,22 +1,3 @@
-function getSelectorType (selector) {
-    var l = selector.charAt(0),
-        type,
-        selectorName;
-    if (l === '#') {
-        type = 'id';
-        selectorName = selector.substring(1);
-    } else if (l.match(/[a-zA-Z]/) || selector === '*') {
-        type = 'tag';
-        selectorName = selector;
-    } else if (l === '.') {
-        type = 'class';
-        selectorName = selector.substring(1);
-    }
-    return {
-        type: type,
-        selectorName: selectorName
-    };
-}
 (function (global) {
     var eventCache = {},
         cacheToken = [],
@@ -38,6 +19,25 @@ function getSelectorType (selector) {
             return navigator.appName === 'Microsoft Internet Explorer' && parseInt(navigator.appVersion.split(';')[1].replace(/[ ]/g, '').replace('MSIE', '')) < 9;
         })();
 
+    function getSelectorType (selector) {
+        var l = selector.charAt(0),
+            type,
+            selectorName;
+        if (l === '#') {
+            type = 'id';
+            selectorName = selector.substring(1);
+        } else if (l.match(/[a-zA-Z]/) || selector === '*') {
+            type = 'tag';
+            selectorName = selector;
+        } else if (l === '.') {
+            type = 'class';
+            selectorName = selector.substring(1);
+        }
+        return {
+            type: type,
+            selectorName: selectorName
+        };
+    }
     function makeCache (el, evt, handler, delegate, selector) {
         var token,
             i,

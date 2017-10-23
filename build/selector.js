@@ -1,3 +1,6 @@
+/**
+ * 數組、元素、對象，選擇器
+ */
 (function (global) {
     var supportCompare = document.compareDocumentPosition,
         deletedIds = [],
@@ -22,26 +25,6 @@
         isUnderIE9 = (function () {
             return navigator.appName === 'Microsoft Internet Explorer' && parseInt(navigator.appVersion.split(';')[1].replace(/[ ]/g, '').replace('MSIE', '')) < 9;
         })();
-
-    function getSelectorType (selector) {
-        var l = selector.charAt(0),
-            type,
-            selectorName;
-        if (l === '#') {
-            type = 'id';
-            selectorName = selector.substring(1);
-        } else if (l.match(/[a-zA-Z]/) || selector === '*') {
-            type = 'tag';
-            selectorName = selector;
-        } else if (l === '.') {
-            type = 'class';
-            selectorName = selector.substring(1);
-        }
-        return {
-            type: type,
-            selectorName: selectorName
-        };
-    }
     function getSibling (el, dir) {
         do {
             el = el[dir];
@@ -57,6 +40,8 @@
         }
         return matched;
     }
+
+    // events
     function makeCache (el, evt, handler, delegate, selector) {
         var token,
             i,
@@ -186,6 +171,7 @@
             temp = null;
         }
     }
+
     function getInnerHTML (el) {
         var innerHTML = el.innerHTML,
             regOne,
@@ -213,6 +199,8 @@
             return l;
         });
     }
+
+    // selector
     function isArrayLike (obj) {
         var length = !!obj && 'length' in obj && obj.length,
             type = getType(obj);
@@ -220,6 +208,25 @@
             return false;
         }
         return type === 'array' || length === 0 || typeof length === 'number' && length > 0 && length - 1 in obj;
+    }
+    function getSelectorType (selector) {
+        var l = selector.charAt(0),
+            type,
+            selectorName;
+        if (l === '#') {
+            type = 'id';
+            selectorName = selector.substring(1);
+        } else if (l.match(/[a-zA-Z]/) || selector === '*') {
+            type = 'tag';
+            selectorName = selector;
+        } else if (l === '.') {
+            type = 'class';
+            selectorName = selector.substring(1);
+        }
+        return {
+            type: type,
+            selectorName: selectorName
+        };
     }
     function eachDom (arr, cb) {
         var that = arr,

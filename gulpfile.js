@@ -15,6 +15,7 @@ const gulp = require('gulp'),
     distJs = 'dist/*.js',
     DIST_JS_PATH = 'dist';
 
+// 選擇要合併的文件
 let fileList = Array.from(require('./importFile'), (n) => DIST_JS_PATH + '/' + n + '.min.js');
 
 let isFixed = file => file.eslint !== null && file.eslint.fixed;
