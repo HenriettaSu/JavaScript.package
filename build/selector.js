@@ -1,6 +1,3 @@
-/**
- * This file depends on 'Array.js' and 'Element.js'
- */
 (function (global) {
     var supportCompare = document.compareDocumentPosition,
         deletedIds = [],
