@@ -62,8 +62,10 @@
             if (selector) {
                 tempEventType[evt] = {};
                 tempEventType[evt][selector] = [delegateEvent];
+                eventCache[token].delegateEventsArr = [evt];
             } else {
                 tempEventType[evt] = [handler];
+                eventCache[token].eventsArr = [evt];
             }
         }
         for (i = 0; i < cacheToken.length; i++) {
@@ -74,14 +76,30 @@
                     noEvent();
                     return;
                 }
+                if (!e[type][evt]) {
+                    if (selector) {
+                        e.delegateEvents[evt] = {};
+                    } else {
+                        e.events[evt] = [];
+                    }
+                }
                 tempEvent = e[type][evt];
                 if (selector) {
+                    if (!tempEvent[selector]) {
+                        tempEvent[selector] = [];
+                        if (!$.inArray(evt, eventCache[token].delegateEventsArr)) {
+                            eventCache[token].delegateEventsArr.push(evt);
+                        }
+                    }
                     tempEvent[selector].push(delegateEvent);
                 } else {
-                    if ($.array.inArray([handler], tempEvent)) {
+                    if ($.inArray(handler, tempEvent)) {
                         return;
                     }
-                    (tempEvent || []).push(handler);
+                    if (!$.inArray(evt, eventCache[token].eventsArr)) {
+                        eventCache[token].eventsArr.push(evt);
+                    }
+                    tempEvent.push(handler);
                 }
                 return;
             }
@@ -114,9 +132,9 @@
         var i,
             e,
             token,
-            events,
             evt,
-            delegateEvents,
+            eventsArr,
+            delegateEventsArr,
             delegateEvt,
             delegateEl,
             j,
@@ -126,23 +144,27 @@
             token = cacheToken[i];
             e = eventCache[token];
             if (e.el === el) {
-                events = Object.keys(e.events);
-                delegateEvents = Object.keys(e.delegateEvents);
-                for (j = 0; j < events.length; j++) {
-                    evt = events[j];
-                    for (k = 0; k < e.events[evt].length; k++) {
-                        handler = e.events[evt][k];
-                        removeEvent(el, evt, handler);
+                if (e.eventsArr) {
+                    eventsArr = e.eventsArr;
+                    for (j = 0; j < eventsArr.length; j++) {
+                        evt = eventsArr[j];
+                        for (k = 0; k < e.events[evt].length; k++) {
+                            handler = e.events[evt][k];
+                            removeEvent(el, evt, handler);
+                        }
                     }
                 }
-                for (j = 0; j < delegateEvents.length; j++) {
-                    evt = delegateEvents[j];
-                    delegateEvt = e.delegateEvents[evt];
-                    for (delegateEl in delegateEvt) {
-                        if (delegateEvt.hasOwnProperty(delegateEl)) {
-                            for (k = 0; k < delegateEvt[delegateEl].length; k++) {
-                                handler = delegateEvt[delegateEl][k].delegate;
-                                removeEvent(el, evt, handler);
+                if (e.delegateEventsArr) {
+                    delegateEventsArr = e.delegateEventsArr;
+                    for (j = 0; j < delegateEventsArr.length; j++) {
+                        evt = delegateEventsArr[j];
+                        delegateEvt = e.delegateEvents[evt];
+                        for (delegateEl in delegateEvt) {
+                            if (delegateEvt.hasOwnProperty(delegateEl)) {
+                                for (k = 0; k < delegateEvt[delegateEl].length; k++) {
+                                    handler = delegateEvt[delegateEl][k].delegate;
+                                    removeEvent(el, evt, handler);
+                                }
                             }
                         }
                     }
@@ -524,6 +546,12 @@
                     $.element.remove(this);
                 });
             },
+            empty: function () {
+                var that = this;
+                that.each(function () {
+                    $.element.empty(this);
+                });
+            },
             addClass: function (css) {
                 var that = this;
                 that.each(function () {
@@ -863,6 +891,8 @@
                     event,
                     j,
                     delegateEvents,
+                    delegateEvent,
+                    delegateEl,
                     dEvt;
                 if (isFun) {
                     handler = args[2];
@@ -877,17 +907,31 @@
                     e = eventCache[token];
                     if (e && e.el === el) {
                         if (!handler) {
-                            event = e.events[evt];
-                            if (event) {
+                            if (e.eventsArr) {
+                                event = e.events[evt];
                                 for (j = 0; j < event.length; j++) {
                                     handler = event[j];
                                     removeEvent(el, evt, handler, useCapture);
                                 }
                                 e.events[evt] = [];
-                                e.delegateEvents[evt] = [];
+                            }
+                            if (e.delegateEventsArr) {
+                                delegateEvent = e.delegateEvents[evt];
+                                for (delegateEl in delegateEvent) {
+                                    if (delegateEvent.hasOwnProperty(delegateEl)) {
+                                        for (j = 0; j < delegateEvent[delegateEl].length; j++) {
+                                            handler = delegateEvent[delegateEl][j].delegate;
+                                            removeEvent(el, evt, handler, useCapture);
+                                        }
+                                    }
+                                }
+                                e.delegateEvents[evt] = {};
                             }
                         } else {
                             if (selector) {
+                                if (!eventCache[token].delegateEvents || !eventCache[token].delegateEvents[evt]) {
+                                    return;
+                                }
                                 delegateEvents = eventCache[token].delegateEvents[evt][selector];
                                 for (j = 0; j < delegateEvents.length; j++) {
                                     dEvt = delegateEvents[j];
@@ -897,6 +941,9 @@
                                     }
                                 }
                             } else {
+                                if (!e.events[evt]) {
+                                    return;
+                                }
                                 $.array.remove(e.events[evt], handler);
                                 removeEvent(el, evt, handler, useCapture);
                             }
@@ -935,6 +982,13 @@
                     $.element.append(el, html);
                 }
             }
+        },
+        inArray: function (el, bArr) { // 檢測元素（數組形式）是否存在於某數組中
+            var i;
+            if (bArr.indexOf(el) < 0) {
+                return false;
+            }
+            return true;
         },
         each: function (arr, cb) {
             eachDom(arr, cb);
