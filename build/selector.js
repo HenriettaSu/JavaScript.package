@@ -169,28 +169,31 @@
                         }
                     }
                 }
-                delete eventCache[token];
+                eventCache[token] = null;
                 cacheToken.splice(i, 1);
+                console.log(eventCache);
                 break;
             }
         }
     }
     function destoryElement (el, destoryRoot) {
-        var temp,
-            child;
-        while (child = el.firstChild) {
-            if (child.nodeType === 1) {
-                cleanEvent(child);
-                $.element.remove(child);
-            } else {
-                temp = el.removeChild(child);
-                temp = null;
-            }
+        var i,
+            children = el.getElementsByTagName('*'),
+            len = children.length,
+            child,
+            temp;
+        for (i = len - 1; i >= 0; i--) {
+            child = children[i];
+            cleanEvent(child);
+            temp = child.parentNode.removeChild(child);
+            temp = null;
         }
         if (destoryRoot) {
             cleanEvent(el);
-            temp = el.parentNode.removeChild(el);
-            temp = null;
+            if (el.parentNode) {
+                temp = el.parentNode.removeChild(el);
+                temp = null;
+            }
         }
     }
 
@@ -983,12 +986,8 @@
                 }
             }
         },
-        inArray: function (el, bArr) { // 檢測元素（數組形式）是否存在於某數組中
-            var i;
-            if (bArr.indexOf(el) < 0) {
-                return false;
-            }
-            return true;
+        inArray: function (el, arr) {
+            return arr.indexOf(el) >= 0;
         },
         each: function (arr, cb) {
             eachDom(arr, cb);
