@@ -42,75 +42,49 @@
     }
 
     // events
-    function makeCache (el, evt, handler, delegate, selector) {
-        var token,
+    function makeCache (el, evt, h, delegate, s) {
+        var handler = s ? {
+                handler: h,
+                delegate: delegate
+            } : h,
+            token,
             i,
             e,
+            tokenMax,
             len,
-            type = selector ? 'delegateEvents' : 'events',
-            tempEventType,
-            tempEvent,
-            delegateEvent;
-        if (selector) {
-            delegateEvent = {
-                handler: handler,
-                delegate: delegate
-            };
-        }
-        function noEvent () {
-            tempEventType = eventCache[token][type] = {};
-            if (selector) {
-                tempEventType[evt] = {};
-                tempEventType[evt][selector] = [delegateEvent];
-                eventCache[token].delegateEventsArr = [evt];
-            } else {
-                tempEventType[evt] = [handler];
-                eventCache[token].eventsArr = [evt];
-            }
-        }
+            selector = s || 'noSelector',
+            tempEvent;
         for (i = 0; i < cacheToken.length; i++) {
             token = cacheToken[i];
             e = eventCache[token];
             if (e.el === el) { // 元素已經在緩存裡
-                if (!e[type]) { // 緩存裡的元素沒有同樣的事件
-                    noEvent();
+                if (!e.events[evt]) { // 沒有這個事件
+                    e.events[evt] = {};
+                    e.events[evt][selector] = [];
+                    eventCache[token].eventsArr.push(evt);
+                }
+                tempEvent = e.events[evt];
+                if (!tempEvent[selector]) {
+                    tempEvent[selector] = [];
+                }
+                if (!s && $.inArray(handler, tempEvent[selector])) {
                     return;
                 }
-                if (!e[type][evt]) {
-                    if (selector) {
-                        e.delegateEvents[evt] = {};
-                    } else {
-                        e.events[evt] = [];
-                    }
-                }
-                tempEvent = e[type][evt];
-                if (selector) {
-                    if (!tempEvent[selector]) {
-                        tempEvent[selector] = [];
-                        if (!$.inArray(evt, eventCache[token].delegateEventsArr)) {
-                            eventCache[token].delegateEventsArr.push(evt);
-                        }
-                    }
-                    tempEvent[selector].push(delegateEvent);
-                } else {
-                    if ($.inArray(handler, tempEvent)) {
-                        return;
-                    }
-                    if (!$.inArray(evt, eventCache[token].eventsArr)) {
-                        eventCache[token].eventsArr.push(evt);
-                    }
-                    tempEvent.push(handler);
-                }
+                tempEvent[selector].push(handler);
                 return;
             }
         }
-        len = cacheToken[cacheToken.length - 1] >= 0 ? cacheToken[cacheToken.length - 1] : -1;
+        tokenMax = cacheToken[cacheToken.length - 1];
+        len = tokenMax >= 0 ? tokenMax : -1;
         token = len + 1;
         cacheToken.push(token);
         eventCache[token] = {
-            el: el
+            el: el,
+            events: {}
         };
-        noEvent();
+        eventCache[token].events[evt] = {};
+        eventCache[token].events[evt][selector] = [handler];
+        eventCache[token].eventsArr = [evt];
     }
     function addEvent (el, evt, handler, useCapture) {
         if (el.addEventListener) {
@@ -130,48 +104,34 @@
     }
     function cleanEvent (el) {
         var i,
+            j,
+            k,
             e,
             token,
             evt,
             eventsArr,
-            delegateEventsArr,
-            delegateEvt,
-            delegateEl,
-            j,
-            k,
+            evtType,
+            selector,
             handler;
         for (i = 0; i < cacheToken.length; i++) {
             token = cacheToken[i];
             e = eventCache[token];
             if (e.el === el) {
-                if (e.eventsArr) {
-                    eventsArr = e.eventsArr;
-                    for (j = 0; j < eventsArr.length; j++) {
-                        evt = eventsArr[j];
-                        for (k = 0; k < e.events[evt].length; k++) {
-                            handler = e.events[evt][k];
-                            removeEvent(el, evt, handler);
-                        }
-                    }
-                }
-                if (e.delegateEventsArr) {
-                    delegateEventsArr = e.delegateEventsArr;
-                    for (j = 0; j < delegateEventsArr.length; j++) {
-                        evt = delegateEventsArr[j];
-                        delegateEvt = e.delegateEvents[evt];
-                        for (delegateEl in delegateEvt) {
-                            if (delegateEvt.hasOwnProperty(delegateEl)) {
-                                for (k = 0; k < delegateEvt[delegateEl].length; k++) {
-                                    handler = delegateEvt[delegateEl][k].delegate;
-                                    removeEvent(el, evt, handler);
-                                }
+                eventsArr = e.eventsArr;
+                for (j = 0; j < eventsArr.length; j++) {
+                    evt = eventsArr[j];
+                    evtType = e.events[evt];
+                    for (selector in evtType) {
+                        if (evtType.hasOwnProperty(selector)) {
+                            for (k = 0; k < evtType[selector].length; k++) {
+                                handler = selector === 'noSelector' ? evtType.noSelector[k] : evtType[selector][k].delegate;
+                                removeEvent(el, evt, handler);
                             }
                         }
                     }
                 }
                 eventCache[token] = null;
                 cacheToken.splice(i, 1);
-                console.log(eventCache);
                 break;
             }
         }
