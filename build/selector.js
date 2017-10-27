@@ -51,22 +51,19 @@
             i,
             e,
             tokenMax,
-            len,
             selector = s || 'noSelector',
             tempEvent;
         for (i = 0; i < cacheToken.length; i++) {
-            token = cacheToken[i];
-            e = eventCache[token];
-            if (e.el === el) { // 元素已經在緩存裡
+            if (cacheToken[i].el === el) { // 元素已經在緩存裡
+                token = cacheToken[i].token;
+                e = eventCache[token];
                 if (!e.events[evt]) { // 沒有這個事件
                     e.events[evt] = {};
                     e.events[evt][selector] = [];
                     eventCache[token].eventsArr.push(evt);
                 }
                 tempEvent = e.events[evt];
-                if (!tempEvent[selector]) {
-                    tempEvent[selector] = [];
-                }
+                tempEvent[selector] = tempEvent[selector] || [];
                 if (!s && $.inArray(handler, tempEvent[selector])) {
                     return;
                 }
@@ -74,10 +71,12 @@
                 return;
             }
         }
-        tokenMax = cacheToken[cacheToken.length - 1];
-        len = tokenMax >= 0 ? tokenMax : -1;
-        token = len + 1;
-        cacheToken.push(token);
+        tokenMax = cacheToken[cacheToken.length - 1] ? cacheToken[cacheToken.length - 1].token : -1;
+        token = tokenMax + 1;
+        cacheToken.push({
+            token: token,
+            el: el
+        });
         eventCache[token] = {
             el: el,
             events: {}
@@ -114,9 +113,9 @@
             selector,
             handler;
         for (i = 0; i < cacheToken.length; i++) {
-            token = cacheToken[i];
-            e = eventCache[token];
-            if (e.el === el) {
+            if (cacheToken[i].el === el) {
+                token = cacheToken[i].token;
+                e = eventCache[token];
                 eventsArr = e.eventsArr;
                 for (j = 0; j < eventsArr.length; j++) {
                     evt = eventsArr[j];
