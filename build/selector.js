@@ -8,6 +8,7 @@
         $,
         eventCache = {},
         cacheToken = [],
+        handlerCache = [],
         supportInnerHTML = (function () {
             var table = document.createElement('table'),
                 tbody = document.createElement('tbody');
@@ -43,31 +44,46 @@
 
     // events
     function makeCache (el, evt, h, delegate, s) {
-        var handler = s ? {
-                handler: h,
-                delegate: delegate
-            } : h,
-            token,
+        var token,
             i,
+            j,
+            k,
             e,
             tokenMax,
-            selector = s || 'noSelector',
-            tempEvent;
+            tempEvent,
+            handler,
+            handlerIndex = handlerCache.indexOf(h);
+        if (handlerIndex < 0) {
+            handlerCache.push(h);
+            handlerIndex = handlerCache.length - 1;
+        }
+        handler = s ? {
+            selector: s,
+            handler: handlerCache[handlerIndex],
+            delegate: delegate
+        } : {
+            selector: 'noSelector',
+            handler: handlerCache[handlerIndex]
+        };
         for (i = 0; i < cacheToken.length; i++) {
             if (cacheToken[i].el === el) { // 元素已經在緩存裡
                 token = cacheToken[i].token;
                 e = eventCache[token];
                 if (!e.events[evt]) { // 沒有這個事件
-                    e.events[evt] = {};
-                    e.events[evt][selector] = [];
-                    eventCache[token].eventsArr.push(evt);
-                }
-                tempEvent = e.events[evt];
-                tempEvent[selector] = tempEvent[selector] || [];
-                if (!s && $.inArray(handler, tempEvent[selector])) {
+                    e.events[evt] = [handler];
+                    e.eventsArr.push(evt);
                     return;
                 }
-                tempEvent[selector].push(handler);
+                tempEvent = e.events[evt];
+                if (!s) {
+                    for (j = 0; j < tempEvent.length; j++) {
+                        k = tempEvent[j];
+                        if (k.selector === 'noSelector' && k.handler === h) {
+                            return;
+                        }
+                    }
+                }
+                tempEvent.push(handler);
                 return;
             }
         }
@@ -81,8 +97,7 @@
             el: el,
             events: {}
         };
-        eventCache[token].events[evt] = {};
-        eventCache[token].events[evt][selector] = [handler];
+        eventCache[token].events[evt] = [handler];
         eventCache[token].eventsArr = [evt];
     }
     function addEvent (el, evt, handler, useCapture) {
@@ -120,13 +135,9 @@
                 for (j = 0; j < eventsArr.length; j++) {
                     evt = eventsArr[j];
                     evtType = e.events[evt];
-                    for (selector in evtType) {
-                        if (evtType.hasOwnProperty(selector)) {
-                            for (k = 0; k < evtType[selector].length; k++) {
-                                handler = selector === 'noSelector' ? evtType.noSelector[k] : evtType[selector][k].delegate;
-                                removeEvent(el, evt, handler);
-                            }
-                        }
+                    for (k = 0; k < evtType.length; k++) {
+                        handler = evtType[k].selector === 'noSelector' ? evtType[k].handler : evtType[k].delegate;
+                        removeEvent(el, evt, handler);
                     }
                 }
                 eventCache[token] = null;
@@ -848,15 +859,14 @@
                     handler,
                     useCapture,
                     i,
+                    j,
                     token,
                     e,
                     event,
-                    j,
-                    delegateEvents,
-                    delegateEvent,
-                    delegateEl,
-                    dEvt;
+                    content,
+                    handlerType;
                 if (isFun) {
+                    selector = 'noSelector';
                     handler = args[2];
                     useCapture = args[3];
                 } else {
@@ -865,52 +875,28 @@
                     useCapture = args[4];
                 }
                 for (i = 0; i < cacheToken.length; i++) {
-                    token = cacheToken[i];
-                    e = eventCache[token];
-                    if (e && e.el === el) {
-                        if (!handler) {
-                            if (e.eventsArr) {
-                                event = e.events[evt];
-                                for (j = 0; j < event.length; j++) {
-                                    handler = event[j];
-                                    removeEvent(el, evt, handler, useCapture);
-                                }
-                                e.events[evt] = [];
-                            }
-                            if (e.delegateEventsArr) {
-                                delegateEvent = e.delegateEvents[evt];
-                                for (delegateEl in delegateEvent) {
-                                    if (delegateEvent.hasOwnProperty(delegateEl)) {
-                                        for (j = 0; j < delegateEvent[delegateEl].length; j++) {
-                                            handler = delegateEvent[delegateEl][j].delegate;
-                                            removeEvent(el, evt, handler, useCapture);
-                                        }
-                                    }
-                                }
-                                e.delegateEvents[evt] = {};
-                            }
-                        } else {
-                            if (selector) {
-                                if (!eventCache[token].delegateEvents || !eventCache[token].delegateEvents[evt]) {
-                                    return;
-                                }
-                                delegateEvents = eventCache[token].delegateEvents[evt][selector];
-                                for (j = 0; j < delegateEvents.length; j++) {
-                                    dEvt = delegateEvents[j];
-                                    if (dEvt.handler === handler) {
-                                        $.array.remove(delegateEvents, dEvt);
-                                        return removeEvent(el, evt, dEvt.delegate, useCapture);
-                                    }
-                                }
-                            } else {
-                                if (!e.events[evt]) {
-                                    return;
-                                }
-                                $.array.remove(e.events[evt], handler);
-                                removeEvent(el, evt, handler, useCapture);
+                    token = cacheToken[i].token;
+                    if (cacheToken[i].el === el) {
+                        e = eventCache[token];
+                        if (!e.events[evt]) {
+                            return;
+                        }
+                        event = e.events[evt];
+                        for (j = 0; j < event.length; j++) {
+                            content = event[j];
+                            handlerType = content.selector === 'noSelector' ? 'handler' : 'delegate';
+                            if (!handler) { // 移除某個事件的所有綁定
+                                removeEvent(el, evt, content[handlerType], useCapture);
+                            } else if (content.selector === selector && content.handler === handler) {
+                                removeEvent(el, evt, content[handlerType], useCapture);
+                                event.splice(j, 1);
+                                return;
                             }
                         }
-                        break;
+                        if (!handler) {
+                            e.events[evt] = [];
+                            break;
+                        }
                     }
                 }
             },
