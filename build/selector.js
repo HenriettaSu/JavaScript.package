@@ -330,7 +330,7 @@
                 }
             }
         } else if (selector.nodeType) {
-            arr = this;
+            return [selector];
         }
         return $.fn.unique(arr);
     }
@@ -751,9 +751,7 @@
                 return el;
             },
             is: function (el, selector) {
-                var id = el.id,
-                    tag = el.localName.toLowerCase(),
-                    s = selector ? selector.trim() : '',
+                var s = selector ? selector.trim() : '',
                     tc,
                     type;
                 if (!s) {
@@ -763,9 +761,9 @@
                 type = tc.type;
                 switch (type) {
                     case 'id':
-                        return '#' + id === s;
+                        return '#' + el.id === s;
                     case 'tag':
-                        return tag === s;
+                        return el.localName.toLowerCase() === s;
                     case 'class':
                         return $.element.hasClass(el, s.replace('.', ''));
                     default:
@@ -842,13 +840,18 @@
                 }
                 function delegateHandler (e) {
                     var event = e || window.event,
-                        target = event.target || event.srcElement;
-                    if ($.element.is(target, selector)) {
-                        handler.apply(target, Array.prototype.slice.call(arguments));
+                        target = event.target || event.srcElement,
+                        currentTarget = event.currentTarget;
+                    while (target !== currentTarget) {
+                        if ($.element.is(target, selector)) {
+                            handler.apply(target, $.from(arguments));
+                            return;
+                        }
+                        target = target.parentNode;
                     }
                 }
                 makeCache(el, evt, handler, delegateHandler, selector);
-                return addEvent(el, evt, delegateHandler, useCapture);
+                return addEvent(el, evt, delegateHandler, true);
             },
             off: function () {
                 var args = arguments,
@@ -933,6 +936,15 @@
         },
         inArray: function (el, arr) {
             return arr.indexOf(el) >= 0;
+        },
+        from: function (arg) {
+            var len = arg.length,
+                ret = new Array(len),
+                i;
+            for (i = 0; i < len; i++) {
+                ret[i] = arg[i];
+            }
+            return ret;
         },
         each: function (arr, cb) {
             eachDom(arr, cb);
