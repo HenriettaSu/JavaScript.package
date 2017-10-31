@@ -125,7 +125,6 @@
             evt,
             eventsArr,
             evtType,
-            selector,
             handler;
         for (i = 0; i < cacheToken.length; i++) {
             if (cacheToken[i].el === el) {
@@ -204,6 +203,9 @@
         }
         return type === 'array' || length === 0 || typeof length === 'number' && length > 0 && length - 1 in obj;
     }
+    function sortDom (arr) {
+
+    }
     function getSelectorType (selector) {
         var l = selector.charAt(0),
             type,
@@ -224,11 +226,10 @@
         };
     }
     function eachDom (arr, cb) {
-        var that = arr,
-            i,
+        var i,
             el;
-        for (i = 0; i < that.length; i++) {
-            el = that[i];
+        for (i = 0; i < arr.length; i++) {
+            el = arr[i];
             cb.call(el);
         }
     }
@@ -240,21 +241,21 @@
         var css,
             className,
             els,
-            arr = [];
+            arr;
         if (dom.getElementsByClassName) {
             className = selector.replace('.', ' ');
-            arr = dom.getElementsByClassName(className);
-        } else {
-            css = selector.split('.');
-            els = dom.getElementsByTagName('*');
-            eachDom(els, function () {
-                var el = this,
-                    classList = $.element.getClass(el).split(' ');
-                if ($.array.inArray(css, classList)) {
-                    arr.push(el);
-                }
-            });
+            return dom.getElementsByClassName(className);
         }
+        css = selector.split('.');
+        els = dom.getElementsByTagName('*');
+        arr = [];
+        eachDom(els, function () {
+            var el = this,
+                classList = $.element.getClass(el).split(' ');
+            if ($.array.inArray(css, classList)) {
+                arr.push(el);
+            }
+        });
         return arr;
     }
     function ByTag (selector, dom) {
@@ -266,15 +267,15 @@
             b,
             className,
             eachTag,
-            notMatch = [];
+            notMatch;
         if (selector.indexOf('.') < 0) {
             return dom.getElementsByTagName(selector);
         }
         s = selector.split('.');
         tag = s[0];
-        s.shift();
         tagList = $.fn.merge([], dom.getElementsByTagName(tag));
-        for (i = 0; i < s.length; i++) {
+        notMatch = [];
+        for (i = 1; i < s.length; i++) {
             className = s[i];
             a = 0;
             b = 0;
@@ -308,8 +309,8 @@
             i,
             eachS,
             e,
-            ssObj = {},
-            arr = [],
+            ssObj,
+            arr,
             temp;
         if (!selector) {
             return;
@@ -320,6 +321,8 @@
                 return byOneSelector(s, dom);
             }
             ss = s.split(',');
+            ssObj = {};
+            arr = [];
             for (i = 0; i < ss.length; i++) {
                 eachS = ss[i];
                 e = eachS.trim();
@@ -381,26 +384,35 @@
             unique: function (els) {
                 var i = 0,
                     j = 0,
-                    aIndex,
-                    bIndex,
+                    k,
+                    l,
+                    a,
                     doEl = document,
                     hasDup = false,
                     el,
                     duplicates = [];
-                els.sort(function (a, b) {
-                    if (a === b) {
+                for (k = 1; k < els.length; k++) {
+                    a = els[k];
+                    l = k;
+                    if (supportCompare) {
+                        while (a.compareDocumentPosition(els[l - 1]) & 4) {
+                            els[l] = els[l - 1];
+                            --l;
+                        }
+                    } else {
+                        while ($.element.index(els[l - 1], doEl) > $.element.index(a, doEl)) {
+                            els[l] = els[l - 1];
+                            --l;
+                        }
+                    }
+                    if (els[k - 1] !== els[l - 1]) {
                         hasDup = true;
                     }
-                    if (supportCompare) {
-                        return a.compareDocumentPosition(b) & 4 ? -1 : 1;
-                    }
-                    aIndex = $.element.index(a, doEl);
-                    bIndex = $.element.index(b, doEl);
-                    return aIndex - bIndex;
-                });
+                    els[l] = a;
+                }
                 if (hasDup) {
                     while (el = els[i++]) {
-                        if (el === els[ i ]) {
+                        if (el === els[i]) {
                             j = duplicates.push(i);
                         }
                     }
