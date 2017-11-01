@@ -203,9 +203,6 @@
         }
         return type === 'array' || length === 0 || typeof length === 'number' && length > 0 && length - 1 in obj;
     }
-    function sortDom (arr) {
-
-    }
     function getSelectorType (selector) {
         var l = selector.charAt(0),
             type,
@@ -213,7 +210,7 @@
         if (l === '#') {
             type = 'id';
             selectorName = selector.substring(1);
-        } else if (l.match(/[a-zA-Z]/) || selector === '*') {
+        } else if (/[a-zA-Z]/.test(l) || selector === '*') {
             type = 'tag';
             selectorName = selector;
         } else if (l === '.') {
@@ -243,7 +240,7 @@
             els,
             arr;
         if (dom.getElementsByClassName) {
-            className = selector.replace('.', ' ');
+            className = selector.split('.').join(' ');
             return dom.getElementsByClassName(className);
         }
         css = selector.split('.');
@@ -386,21 +383,22 @@
                     j = 0,
                     k,
                     l,
-                    a,
+                    tmp,
                     doEl = document,
                     hasDup = false,
                     el,
-                    duplicates = [];
-                for (k = 1; k < els.length; k++) {
-                    a = els[k];
+                    duplicates = [],
+                    len = els.length;
+                for (k = 1; k < len; k++) {
+                    tmp = els[k];
                     l = k;
                     if (supportCompare) {
-                        while (a.compareDocumentPosition(els[l - 1]) & 4) {
+                        while (tmp.compareDocumentPosition(els[l - 1]) & 4) {
                             els[l] = els[l - 1];
                             --l;
                         }
                     } else {
-                        while ($.element.index(els[l - 1], doEl) > $.element.index(a, doEl)) {
+                        while ($.element.index(els[l - 1], doEl) > $.element.index(tmp, doEl)) {
                             els[l] = els[l - 1];
                             --l;
                         }
@@ -408,7 +406,7 @@
                     if (els[k - 1] !== els[l - 1]) {
                         hasDup = true;
                     }
-                    els[l] = a;
+                    els[l] = tmp;
                 }
                 if (hasDup) {
                     while (el = els[i++]) {
@@ -730,10 +728,10 @@
                 }
                 for (i = 0; i < cssArry.length; i++) {
                     className = cssArry[i];
-                    if (notSupport) {
-                        $.array.remove(classList, className);
-                    } else {
+                    if (!notSupport) {
                         classList.remove(className);
+                    } else {
+                        $.array.remove(classList, className);
                     }
                 }
                 if (notSupport) {
@@ -777,7 +775,7 @@
                     case 'tag':
                         return el.localName.toLowerCase() === s;
                     case 'class':
-                        return $.element.hasClass(el, s.replace('.', ''));
+                        return $.element.hasClass(el, s.split('.').join(' '));
                     default:
                         return false;
                 }
@@ -945,6 +943,18 @@
                     $.element.append(el, html);
                 }
             }
+        },
+        replaceAll: function (o, n, str) {
+            var i = 0;
+            while (i < str.length) {
+                if (str.substring && str.substring(i, i + o.length) === o) {
+                    str = str.substring(0, i) + n + str.substring(i + o.length, str.length);
+                    i += n.length;
+                } else {
+                    i++;
+                }
+            }
+            return str;
         },
         inArray: function (el, arr) {
             return arr.indexOf(el) >= 0;
