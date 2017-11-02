@@ -379,46 +379,43 @@
                 eachDom(this, cb);
             },
             unique: function (els) {
-                var i = 0,
-                    j = 0,
-                    k,
-                    l,
+                var i,
+                    j,
                     tmp,
-                    doEl = document,
-                    hasDup = false,
+                    len = els.length,
                     el,
-                    duplicates = [],
-                    len = els.length;
-                for (k = 1; k < len; k++) {
-                    tmp = els[k];
-                    l = k;
-                    if (supportCompare) {
-                        while (tmp.compareDocumentPosition(els[l - 1]) & 4) {
-                            els[l] = els[l - 1];
-                            --l;
+                    index,
+                    indexArr,
+                    ret;
+                if (supportCompare) {
+                    for (i = 1; i < len; i++) {
+                        tmp = els[i];
+                        j = i;
+                        while (tmp.compareDocumentPosition(els[j - 1]) & 4) {
+                            els[j] = els[j - 1];
+                            --j;
                         }
-                    } else {
-                        while ($.element.index(els[l - 1], doEl) > $.element.index(tmp, doEl)) {
-                            els[l] = els[l - 1];
-                            --l;
+                        if (tmp === els[j - 1]) {
+                            els.splice(j, 1);
+                            i--;
+                            len--;
+                        } else {
+                            els[j] = tmp;
                         }
                     }
-                    if (els[k - 1] !== els[l - 1]) {
-                        hasDup = true;
-                    }
-                    els[l] = tmp;
+                    return els;
                 }
-                if (hasDup) {
-                    while (el = els[i++]) {
-                        if (el === els[i]) {
-                            j = duplicates.push(i);
-                        }
-                    }
-                    while (j--) {
-                        els.splice(duplicates[j], 1);
+                indexArr = [];
+                ret = [];
+                for (i = 0; i < els.length; i++) {
+                    el = els[i];
+                    index = $.element.index(el, document);
+                    if (indexArr.indexOf(index) === -1) {
+                        indexArr.push(index);
+                        ret.push(el);
                     }
                 }
-                return els;
+                return ret;
             },
             makeArray: function (arr, results) {
                 var ret = results || [];
