@@ -385,7 +385,7 @@
                     len = els.length,
                     el,
                     index,
-                    indexArr,
+                    obj,
                     ret;
                 if (supportCompare) {
                     for (i = 1; i < len; i++) {
@@ -405,13 +405,13 @@
                     }
                     return els;
                 }
-                indexArr = [];
+                obj = {};
                 ret = [];
                 for (i = 0; i < els.length; i++) {
                     el = els[i];
                     index = $.element.index(el, document);
-                    if (indexArr.indexOf(index) === -1) {
-                        indexArr.push(index);
+                    if (!obj[index]) {
+                        obj[index] = true;
                         ret.push(el);
                     }
                 }
